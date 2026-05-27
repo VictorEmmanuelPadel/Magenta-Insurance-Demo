@@ -23,7 +23,7 @@ import os
 from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
 
 load_dotenv()
 
@@ -379,6 +379,41 @@ NOTIFICATIONS = [
 # Seeder
 # -----------------------------
 
+def ensure_indexes(db) -> None:
+    # customers — lookup by customer_id
+    db.customers.create_index(
+        [("customer_id", ASCENDING)],
+        unique=True,
+        name="customer_id_unique",
+    )
+
+    # policies — lookup by policy_number; list by customer
+    db.policies.create_index(
+        [("policy_number", ASCENDING)],
+        unique=True,
+        name="policy_number_unique",
+    )
+    db.policies.create_index(
+        [("customer_id", ASCENDING), ("created_at", DESCENDING)],
+        name="policy_customer_created",
+    )
+
+    # claims — lookup/update by claim_id; list by customer; filter by status
+    db.claims.create_index(
+        [("claim_id", ASCENDING)],
+        unique=True,
+        name="claim_id_unique",
+    )
+    db.claims.create_index(
+        [("customer_id", ASCENDING), ("created_at", DESCENDING)],
+        name="claim_customer_created",
+    )
+    db.claims.create_index(
+        [("status", ASCENDING), ("created_at", DESCENDING)],
+        name="claim_status_created",
+    )
+
+
 def upsert_many(collection, key_field, docs):
     inserted = 0
     updated = 0
@@ -404,6 +439,8 @@ def main():
     client = MongoClient(MONGODB_URI)
     db = client[MONGODB_DB]
 
+    ensure_indexes(db)
+
     customer_inserted, customer_updated = upsert_many(db.customers, "customer_id", CUSTOMERS)
     claim_inserted, claim_updated = upsert_many(db.claims, "claim_id", CLAIMS)
     notification_inserted, notification_updated = upsert_many(db.notifications, "notification_id", NOTIFICATIONS)
@@ -415,6 +452,11 @@ def main():
     print(f"Claims updated:         {claim_updated}")
     print(f"Notifications inserted: {notification_inserted}")
     print(f"Notifications updated:  {notification_updated}")
+    print()
+    print("Indexes ensured:")
+    print("  customers:  customer_id (unique)")
+    print("  policies:   policy_number (unique), customer_id + created_at")
+    print("  claims:     claim_id (unique), customer_id + created_at, status + created_at")
     print()
     print("Policy count was not changed by this script.")
     print(f"Database: {MONGODB_DB}")

@@ -14,14 +14,21 @@ What this does:
   - Builds a searchable text summary for each claim.
   - Sends those summaries to Voyage AI.
   - Writes the vector back onto the SAME claim document.
+  - Creates (or skips if existing) an Atlas Vector Search index on the embedding field.
   - Does not create new policies or claims.
 
 Result in Atlas:
-  claims.embedding              -> vector array
+  claims.embedding              -> vector array (1024 dims, cosine similarity)
   claims.embedding_text         -> source text used for embedding
   claims.embedding_model        -> Voyage model name
   claims.embedding_dimensions   -> vector dimension count
   claims.embedding_created_at   -> timestamp
+
+Vector search index (claim_vector_index):
+  type:           autoEmbed (Atlas manages vectors from embedding_text)
+  index model:    voyage-4-large (1024 dims, cosine)
+  query model:    voyage-4-lite (overridden at query-time, also 1024 dims)
+  filter fields:  status, customer_id, risk_level
 
 Before running:
   Copy .env.example to .env and fill in MONGODB_URI, MONGODB_DB, and VOYAGE_API_KEY.
@@ -34,6 +41,7 @@ from typing import Dict, List
 import voyageai
 from dotenv import load_dotenv
 from pymongo import MongoClient
+from pymongo.errors import OperationFailure
 
 load_dotenv()
 
@@ -90,6 +98,40 @@ def claim_to_embedding_text(claim: Dict) -> str:
 def chunks(items: List[Dict], size: int):
     for i in range(0, len(items), size):
         yield items[i : i + size]
+
+
+def ensure_vector_search_index(claims_collection) -> None:
+    # autoEmbed type — Atlas generates and manages vectors from embedding_text.
+    # voyage-4-large at index-time (higher quality); voyage-4-lite can be used
+    # at query-time (cheaper/faster) because both models support 1024-dim output,
+    # satisfying the compatibility requirement.
+    index_def = {
+        "name": "claim_vector_index",
+        "type": "vectorSearch",
+        "definition": {
+            "fields": [
+                {
+                    "type": "autoEmbed",
+                    "modality": "text",
+                    "path": "embedding_text",
+                    "model": "voyage-4-large",
+                    "numDimensions": 1024,
+                    "similarity": "cosine",
+                },
+                {"type": "filter", "path": "status"},
+                {"type": "filter", "path": "customer_id"},
+                {"type": "filter", "path": "risk_level"},
+            ]
+        },
+    }
+    try:
+        claims_collection.create_search_index(index_def)
+        print("Vector search index 'claim_vector_index' created (autoEmbed, voyage-4-large, 1024 dims).")
+    except OperationFailure as exc:
+        if "already exists" in str(exc).lower() or exc.code in (68, 85):
+            print("Vector search index 'claim_vector_index' already exists — skipping.")
+        else:
+            raise
 
 
 # =============================================================================
@@ -153,6 +195,8 @@ def main() -> None:
     print(f"Vector field: embedding")
     print(f"Dimensions: {OUTPUT_DIMENSION}")
     print(f"Model: {VOYAGE_MODEL}")
+    print()
+    ensure_vector_search_index(claims)
 
 
 if __name__ == "__main__":

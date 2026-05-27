@@ -43,106 +43,263 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1")
 
 st.set_page_config(
     page_title="Magenta Insurance Agent",
-    page_icon="🛡️",
+    page_icon="🍃",
     layout="wide",
 )
 
-MAGENTA_CSS = """
+# MongoDB LeafyGreen design system
+# Palette: https://www.mongodb.design/foundations/palette
+LG_CSS = """
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&display=swap');
+
     :root {
-        --magenta: #e0007a;
-        --magenta-dark: #9b0056;
-        --magenta-soft: #fff0f8;
-        --purple: #8b2be2;
-        --ink: #171321;
-        --muted: #6b6475;
-        --border: #f3c4dc;
+        /* LeafyGreen palette */
+        --mdb-black:       #001E2B;
+        --mdb-white:       #ffffff;
+
+        --gray-dark-3:     #21313C;
+        --gray-dark-2:     #3D4F58;
+        --gray-dark-1:     #5C6C75;
+        --gray-base:       #889397;
+        --gray-light-1:    #C1C7C6;
+        --gray-light-2:    #E8EDEB;
+        --gray-light-3:    #F9FBFA;
+
+        --green-dark-3:    #023430;
+        --green-dark-2:    #00684A;
+        --green-dark-1:    #00A35C;
+        --green-base:      #00ED64;
+        --green-light-1:   #71F6BA;
+        --green-light-2:   #C0FAE6;
+        --green-light-3:   #E3FCF7;
+
+        --blue-base:       #016BF8;
+        --blue-light-3:    #E1F7FF;
+
+        --yellow-base:     #FFC010;
+        --yellow-light-3:  #FEF7DB;
+
+        --red-base:        #DB3030;
+        --red-light-3:     #FFEAE5;
+
+        --purple-base:     #B45AF2;
+        --purple-light-3:  #F9EBFF;
+
+        /* Semantic tokens */
+        --text-primary:    var(--mdb-black);
+        --text-secondary:  var(--gray-dark-1);
+        --text-muted:      var(--gray-base);
+        --bg-primary:      var(--mdb-white);
+        --bg-secondary:    var(--gray-light-3);
+        --border-color:    var(--gray-light-2);
+
+        --font-body: 'Euclid Circular A', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-code: 'Source Code Pro', 'Menlo', 'Courier New', monospace;
     }
 
+    /* ── Global ── */
     .stApp {
-        background: linear-gradient(135deg, #fff7fb 0%, #ffffff 42%, #f9f4ff 100%);
+        background-color: var(--bg-secondary);
+        font-family: var(--font-body);
+        color: var(--text-primary);
     }
 
-    h1, h2, h3 {
-        color: var(--ink);
+    h1, h2, h3, h4 {
+        font-family: var(--font-body);
+        color: var(--text-primary);
     }
 
+    /* ── Hero banner ── */
     .hero {
-        padding: 1.3rem 1.4rem;
-        border-radius: 24px;
-        background: linear-gradient(135deg, var(--magenta) 0%, var(--purple) 100%);
-        color: white;
-        margin-bottom: 1.2rem;
-        box-shadow: 0 16px 40px rgba(224, 0, 122, 0.2);
+        background-color: var(--mdb-black);
+        border-radius: 8px;
+        padding: 1.5rem 1.75rem;
+        margin-bottom: 1.25rem;
+        border-left: 4px solid var(--green-base);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
 
-    .hero h1 {
-        color: white;
+    .hero-text h1 {
+        color: var(--mdb-white);
         margin: 0;
-        font-size: 2.2rem;
+        font-size: 1.9rem;
+        letter-spacing: -0.01em;
     }
 
-    .hero p {
-        color: rgba(255,255,255,0.92);
-        margin: 0.35rem 0 0 0;
-        font-weight: 600;
+    .hero-text h1 span {
+        color: var(--green-base);
     }
 
-    /* Style the real Streamlit metric widgets. No fake wrapper divs. */
+    .hero-text p {
+        color: var(--gray-light-1);
+        margin: 0.3rem 0 0 0;
+        font-size: 0.95rem;
+    }
+
+    /* ── Metric cards ── */
     [data-testid="stMetric"] {
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.88);
-        border-radius: 20px;
-        padding: 1rem;
-        box-shadow: 0 8px 30px rgba(155, 0, 86, 0.08);
+        background-color: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 30, 43, 0.06);
     }
 
     [data-testid="stMetric"] label {
-        color: var(--muted) !important;
-        font-weight: 700;
+        color: var(--text-secondary) !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
     }
 
     [data-testid="stMetricValue"] {
-        color: var(--ink);
+        color: var(--text-primary) !important;
+        font-family: var(--font-code) !important;
+        font-size: 1.8rem !important;
     }
 
+    /* ── Status pills ── */
     .status-pill {
         display: inline-block;
-        padding: 0.25rem 0.6rem;
-        border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 800;
-        background: var(--magenta-soft);
-        color: var(--magenta-dark);
-        border: 1px solid var(--border);
+        padding: 0.2rem 0.55rem;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        font-family: var(--font-body);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        vertical-align: middle;
     }
 
+    .status-pill.risk-low {
+        background-color: var(--green-light-3);
+        color: var(--green-dark-2);
+        border: 1px solid var(--green-light-2);
+    }
+
+    .status-pill.risk-medium {
+        background-color: var(--yellow-light-3);
+        color: #4C2100;
+        border: 1px solid var(--yellow-base);
+    }
+
+    .status-pill.risk-high {
+        background-color: var(--red-light-3);
+        color: #970606;
+        border: 1px solid #FFCDC7;
+    }
+
+    .status-pill.risk-unknown {
+        background-color: var(--gray-light-3);
+        color: var(--gray-dark-2);
+        border: 1px solid var(--gray-light-2);
+    }
+
+    /* ── Review cards ── */
     .review-card {
-        border: 1px solid var(--border);
-        background: white;
-        border-radius: 18px;
-        padding: 1rem;
-        margin-bottom: 0.8rem;
-        box-shadow: 0 8px 30px rgba(155, 0, 86, 0.08);
+        background-color: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 30, 43, 0.06);
     }
 
+    /* ── Buttons ── */
     .stButton > button {
-        border-radius: 999px;
-        border: 1px solid var(--magenta);
-        color: white;
-        background: var(--magenta);
-        font-weight: 800;
+        border-radius: 6px;
+        background-color: var(--green-dark-1);
+        color: var(--mdb-white);
+        border: 1px solid var(--green-dark-1);
+        font-weight: 700;
+        font-family: var(--font-body);
+        font-size: 0.875rem;
+        padding: 0.45rem 1rem;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
     }
 
     .stButton > button:hover {
-        border-color: var(--magenta-dark);
-        background: var(--magenta-dark);
-        color: white;
+        background-color: var(--green-dark-2);
+        border-color: var(--green-dark-2);
+        color: var(--mdb-white);
+    }
+
+    /* ── Sidebar ── */
+    [data-testid="stSidebar"] {
+        background-color: var(--mdb-black);
+    }
+
+    [data-testid="stSidebar"] * {
+        color: var(--gray-light-1) !important;
+    }
+
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] .stSidebarHeader {
+        color: var(--mdb-white) !important;
+    }
+
+    [data-testid="stSidebar"] .stButton > button {
+        background-color: var(--green-base);
+        border-color: var(--green-base);
+        color: var(--mdb-black);
+    }
+
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background-color: var(--green-light-1);
+        border-color: var(--green-light-1);
+        color: var(--mdb-black);
+    }
+
+    [data-testid="stSidebar"] code {
+        background-color: var(--gray-dark-3) !important;
+        color: var(--green-base) !important;
+        border-radius: 4px;
+        padding: 0.15rem 0.4rem;
+        font-family: var(--font-code);
+    }
+
+    /* ── Tabs ── */
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+        border-bottom: 2px solid var(--border-color);
+        gap: 0;
+    }
+
+    [data-testid="stTabs"] [data-baseweb="tab"] {
+        font-family: var(--font-body);
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        padding: 0.6rem 1.25rem;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+    }
+
+    [data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {
+        color: var(--mdb-black);
+        border-bottom-color: var(--green-dark-1);
+    }
+
+    /* ── Dataframe ── */
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    /* ── General card-like containers ── */
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+        background-color: var(--bg-primary);
     }
 </style>
 """
 
-st.markdown(MAGENTA_CSS, unsafe_allow_html=True)
+st.markdown(LG_CSS, unsafe_allow_html=True)
 
 
 # =============================================================================
@@ -530,6 +687,41 @@ def list_pending_claims(customer_id: Optional[str] = None) -> Dict[str, Any]:
     return {"pending_claims": docs}
 
 
+def search_similar_claims(query: str, limit: int = 5, status: Optional[str] = None) -> Dict[str, Any]:
+    # autoEmbed index — index built with voyage-4-large (1024 dims); voyage-4-lite
+    # overrides at query-time (cheaper) and is compatible via shared 1024-dim output.
+    pipeline: List[Dict[str, Any]] = [
+        {
+            "$vectorSearch": {
+                "index": "claim_vector_index",
+                "path": "embedding_text",
+                "query": {"text": query},
+                "model": "voyage-4-lite",
+                "numCandidates": limit * 20,
+                "limit": limit,
+                **({"filter": {"status": {"$eq": status}}} if status else {}),
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "claim_id": 1,
+                "policy_number": 1,
+                "customer_id": 1,
+                "claim_type": 1,
+                "damage_amount": 1,
+                "description": 1,
+                "status": 1,
+                "risk_level": 1,
+                "risk_score": 1,
+                "score": {"$meta": "vectorSearchScore"},
+            }
+        },
+    ]
+    results = list(get_collection("claims").aggregate(pipeline))
+    return {"query": query, "results": results, "count": len(results)}
+
+
 TOOL_REGISTRY = {
     "lookup_policy": lookup_policy,
     "list_customer_policies": list_customer_policies,
@@ -540,6 +732,7 @@ TOOL_REGISTRY = {
     "check_claim_status": check_claim_status,
     "list_customer_claims": list_customer_claims,
     "list_pending_claims": list_pending_claims,
+    "search_similar_claims": search_similar_claims,
 }
 
 FUNCTIONS = [
@@ -552,6 +745,7 @@ FUNCTIONS = [
     {"name": "check_claim_status", "description": "Check current claim status by claim ID.", "parameters": {"type": "object", "properties": {"claim_id": {"type": "string"}}, "required": ["claim_id"]}},
     {"name": "list_customer_claims", "description": "List claims for a customer.", "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]}},
     {"name": "list_pending_claims", "description": "List pending human-review claims, optionally for a customer.", "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": []}},
+    {"name": "search_similar_claims", "description": "Semantic search over claims using natural language. Finds claims similar in meaning to the query. Optionally filter by status.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer", "default": 5}, "status": {"type": "string", "enum": ["filed", "approved", "denied", "pending_human_review"]}}, "required": ["query"]}},
 ]
 
 SYSTEM_PROMPT = """
@@ -661,8 +855,10 @@ def render_header() -> None:
     st.markdown(
         """
         <div class="hero">
-            <h1>Magenta Insurance Agent</h1>
-            <p>Policy management, quotes, claims processing, and human-in-the-loop review.</p>
+            <div class="hero-text">
+                <h1>Magenta <span>Insurance Agent</span></h1>
+                <p>Policy management · Quotes · Claims processing · Human-in-the-loop review</p>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -713,8 +909,8 @@ def render_sidebar() -> None:
             st.rerun()
 
         st.divider()
-        st.caption("Demo architecture")
-        st.write("Streamlit → OpenAI function calling → Python tools → MongoDB Atlas")
+        st.caption("Architecture")
+        st.code("Streamlit → OpenAI → Python tools → MongoDB Atlas", language=None)
 
         st.divider()
         st.caption("Try")
@@ -761,8 +957,10 @@ def render_review_tab() -> None:
 
     for raw in pending:
         claim = clean_doc(raw)
+        risk_level = claim.get("risk_level", "unknown")
+        risk_css = f"risk-{risk_level}" if risk_level in ("low", "medium", "high") else "risk-unknown"
         st.markdown("<div class='review-card'>", unsafe_allow_html=True)
-        st.markdown(f"### {claim['claim_id']} <span class='status-pill'>{claim.get('risk_level', 'unknown')} risk</span>", unsafe_allow_html=True)
+        st.markdown(f"### {claim['claim_id']} <span class='status-pill {risk_css}'>{risk_level} risk</span>", unsafe_allow_html=True)
         st.write(f"**Policy:** {claim['policy_number']}")
         st.write(f"**Customer:** {claim['customer_id']}")
         st.write(f"**Type:** {claim['claim_type']}")
