@@ -336,7 +336,7 @@ Typical local files:
 ```text
 app.py                         # Streamlit insurance agent app
 seeder.py                      # Adds richer customers, claims, notifications
-add_claim_vectors_voyage.py    # Adds Voyage embeddings to claims
+embedder.py                    # Adds Voyage embeddings to claims
 magenta.png                    # Pink Magenta leaf logo
 README.md                      # This file
 ```
@@ -350,16 +350,21 @@ This demo is intentionally simple and Python 3.10-friendly.
 Install dependencies:
 
 ```bash
-python3 -m pip install streamlit pymongo openai==0.28.1 voyageai
+python3 -m pip install streamlit pymongo openai==0.28.1 voyageai python-dotenv
 ```
 
-Configure the constants at the top of `app.py`:
+Copy the example env file and fill in your values:
 
-```python
-OPENAI_API_KEY = "PASTE_YOUR_OPENAI_KEY_HERE"
-MONGODB_URI = "PASTE_YOUR_MONGODB_ATLAS_URI_HERE"
-MONGODB_DB = "magenta_insurance_demo"
-OPENAI_MODEL = "gpt-4.1"
+```bash
+cp .env.example .env
+```
+
+```text
+MONGODB_URI=<your Atlas connection string>
+MONGODB_DB=magenta_insurance_demo
+OPENAI_API_KEY=<your OpenAI key>
+OPENAI_MODEL=gpt-4.1
+VOYAGE_API_KEY=<your Voyage AI key>   # only needed for embedder.py
 ```
 
 Run the app:
@@ -396,16 +401,13 @@ The seeder uses upserts, so it can be run multiple times without duplicating the
 To add Voyage embeddings to the existing `claims` collection:
 
 ```bash
-python3 add_claim_vectors_voyage.py
+python3 embedder.py
 ```
 
-Configure the constants at the top of the script:
+Make sure `MONGODB_URI`, `MONGODB_DB`, and `VOYAGE_API_KEY` are set in your `.env` file, then run:
 
-```python
-MONGODB_URI = "PASTE_YOUR_MONGODB_ATLAS_URI_HERE"
-VOYAGE_API_KEY = "PASTE_YOUR_VOYAGE_API_KEY_HERE"
-VOYAGE_MODEL = "voyage-4-large"
-OUTPUT_DIMENSION = 1024
+```bash
+python3 embedder.py
 ```
 
 The script updates existing claim documents and does not create new policies or claims.

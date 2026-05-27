@@ -3,17 +3,17 @@ Magenta Insurance Agent Demo
 Python 3.10-compatible Streamlit app using MongoDB Atlas + legacy OpenAI SDK function calling.
 
 Install:
-  python3 -m pip install streamlit pymongo openai==0.28.1
+  python3 -m pip install streamlit pymongo openai==0.28.1 python-dotenv
 
 Run:
   streamlit run app.py
 
 Config:
-  Paste your OpenAI key and MongoDB Atlas URI into the constants below.
-  This intentionally does NOT use .env, uv, sidebar secret inputs, or the newer OpenAI client import.
+  Copy .env.example to .env and fill in your values. The app reads from .env automatically.
 """
 
 import json
+import os
 import re
 import uuid
 from datetime import datetime
@@ -21,18 +21,20 @@ from typing import Any, Dict, List, Optional
 
 import openai
 import streamlit as st
+from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
+load_dotenv()
 
 # =============================================================================
-# CONFIG — paste your real values here for local demo use
+# CONFIG — values are loaded from .env; override here only if needed
 # =============================================================================
 
-OPENAI_API_KEY = ""
-MONGODB_URI = ""
-MONGODB_DB = "magenta_insurance_demo"
-OPENAI_MODEL = "gpt-4.1"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+MONGODB_URI = os.getenv("MONGODB_URI", "")
+MONGODB_DB = os.getenv("MONGODB_DB", "magenta_insurance_demo")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1")
 
 
 # =============================================================================

@@ -4,10 +4,10 @@ Add Voyage AI embeddings to the existing claims collection in MongoDB Atlas.
 Python 3.10-compatible.
 
 Install:
-  python3 -m pip install pymongo voyageai
+  python3 -m pip install pymongo voyageai python-dotenv
 
 Run:
-  python3 add_claim_vectors_voyage.py
+  python3 embedder.py
 
 What this does:
   - Reads documents from the claims collection.
@@ -24,26 +24,30 @@ Result in Atlas:
   claims.embedding_created_at   -> timestamp
 
 Before running:
-  Paste your Atlas URI and Voyage API key below.
+  Copy .env.example to .env and fill in MONGODB_URI, MONGODB_DB, and VOYAGE_API_KEY.
 """
 
+import os
 from datetime import datetime
 from typing import Dict, List
 
-from pymongo import MongoClient
 import voyageai
+from dotenv import load_dotenv
+from pymongo import MongoClient
+
+load_dotenv()
 
 
 # =============================================================================
 # CONFIG
 # =============================================================================
 
-MONGODB_URI = ""
-MONGODB_DB = ""
+MONGODB_URI = os.getenv("MONGODB_URI", "")
+MONGODB_DB = os.getenv("MONGODB_DB", "magenta_insurance_demo")
 COLLECTION_NAME = "claims"
 
-VOYAGE_API_KEY = ""
-VOYAGE_MODEL = "voyage-4-large"
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "")
+VOYAGE_MODEL = os.getenv("VOYAGE_MODEL", "voyage-4-large")
 OUTPUT_DIMENSION = 1024
 BATCH_SIZE = 32
 

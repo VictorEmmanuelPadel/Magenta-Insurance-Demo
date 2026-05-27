@@ -4,10 +4,10 @@ Add more demo customers and claims to the Magenta Insurance Streamlit demo.
 Python 3.10-compatible.
 
 Install if needed:
-  python3 -m pip install pymongo
+  python3 -m pip install pymongo python-dotenv
 
 Run:
-  python3 seed_more_insurance_data.py
+  python3 seeder.py
 
 What this does:
   - Adds more customers/prospects.
@@ -16,18 +16,23 @@ What this does:
   - Uses upserts, so you can run it multiple times without duplicating these seeded records.
 
 Before running:
-  Paste your Atlas connection string into MONGODB_URI below.
+  Copy .env.example to .env and fill in MONGODB_URI and MONGODB_DB.
 """
 
+import os
 from datetime import datetime, timedelta
+
+from dotenv import load_dotenv
 from pymongo import MongoClient
+
+load_dotenv()
 
 # -----------------------------
 # Config
 # -----------------------------
 
-MONGODB_URI = ""
-MONGODB_DB = ""
+MONGODB_URI = os.getenv("MONGODB_URI", "")
+MONGODB_DB = os.getenv("MONGODB_DB", "magenta_insurance_demo")
 
 
 def now_iso(offset_days=0):
