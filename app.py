@@ -1,9 +1,9 @@
 """
 Magenta Insurance Agent Demo
-Python 3.10-compatible Streamlit app using MongoDB Atlas + legacy OpenAI SDK function calling.
+Python 3.10-compatible Streamlit app using MongoDB Atlas + Anthropic Claude via Grove gateway.
 
 Install:
-  python3 -m pip install streamlit pymongo openai==0.28.1 python-dotenv
+  python3 -m pip install streamlit pymongo httpx python-dotenv
 
 Run:
   streamlit run app.py
@@ -19,7 +19,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import openai
+import httpx
 import streamlit as st
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -31,10 +31,14 @@ load_dotenv()
 # CONFIG — values are loaded from .env; override here only if needed
 # =============================================================================
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+GROVE_API_KEY = os.getenv("GROVE_API_KEY", "")
+ANTHROPIC_BASE_URL = os.getenv(
+    "ANTHROPIC_BASE_URL",
+    "https://grove-gateway-prod.azure-api.net/grove-foundry-prod/anthropic/v1/messages",
+)
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 MONGODB_URI = os.getenv("MONGODB_URI", "")
 MONGODB_DB = os.getenv("MONGODB_DB", "magenta_insurance_demo")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1")
 
 
 # =============================================================================
@@ -735,17 +739,18 @@ TOOL_REGISTRY = {
     "search_similar_claims": search_similar_claims,
 }
 
-FUNCTIONS = [
-    {"name": "lookup_policy", "description": "Look up an insurance policy by policy number.", "parameters": {"type": "object", "properties": {"policy_number": {"type": "string"}}, "required": ["policy_number"]}},
-    {"name": "list_customer_policies", "description": "List policies for a customer.", "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]}},
-    {"name": "get_quote", "description": "Generate an auto insurance quote.", "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}, "vehicle_year": {"type": "integer"}, "vehicle_make": {"type": "string"}, "vehicle_model": {"type": "string"}, "driver_age": {"type": "integer"}, "coverage_level": {"type": "string", "enum": ["liability", "collision", "comprehensive"]}}, "required": ["customer_id", "vehicle_year", "vehicle_make", "vehicle_model", "driver_age", "coverage_level"]}},
-    {"name": "create_policy", "description": "Create a new auto insurance policy after the customer accepts a quote.", "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}, "customer_name": {"type": "string"}, "vehicle_year": {"type": "integer"}, "vehicle_make": {"type": "string"}, "vehicle_model": {"type": "string"}, "coverage_level": {"type": "string"}, "monthly_premium": {"type": "number"}, "coverage_limit": {"type": "number"}}, "required": ["customer_id", "customer_name", "vehicle_year", "vehicle_make", "vehicle_model", "coverage_level", "monthly_premium", "coverage_limit"]}},
-    {"name": "file_claim", "description": "File an auto insurance claim. After filing, call analyze_claim_risk with the returned claim_id.", "parameters": {"type": "object", "properties": {"policy_number": {"type": "string"}, "claim_type": {"type": "string", "enum": ["collision", "theft", "comprehensive", "glass", "vandalism"]}, "damage_amount": {"type": "number"}, "description": {"type": "string"}}, "required": ["policy_number", "claim_type", "damage_amount", "description"]}},
-    {"name": "analyze_claim_risk", "description": "Analyze a filed claim. Auto-approves low-risk claims and marks high-risk claims pending human review.", "parameters": {"type": "object", "properties": {"claim_id": {"type": "string"}}, "required": ["claim_id"]}},
-    {"name": "check_claim_status", "description": "Check current claim status by claim ID.", "parameters": {"type": "object", "properties": {"claim_id": {"type": "string"}}, "required": ["claim_id"]}},
-    {"name": "list_customer_claims", "description": "List claims for a customer.", "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]}},
-    {"name": "list_pending_claims", "description": "List pending human-review claims, optionally for a customer.", "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": []}},
-    {"name": "search_similar_claims", "description": "Semantic search over claims using natural language. Finds claims similar in meaning to the query. Optionally filter by status.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer", "default": 5}, "status": {"type": "string", "enum": ["filed", "approved", "denied", "pending_human_review"]}}, "required": ["query"]}},
+# Anthropic tool definitions — same as OpenAI functions but uses input_schema instead of parameters.
+TOOLS = [
+    {"name": "lookup_policy", "description": "Look up an insurance policy by policy number.", "input_schema": {"type": "object", "properties": {"policy_number": {"type": "string"}}, "required": ["policy_number"]}},
+    {"name": "list_customer_policies", "description": "List policies for a customer.", "input_schema": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]}},
+    {"name": "get_quote", "description": "Generate an auto insurance quote.", "input_schema": {"type": "object", "properties": {"customer_id": {"type": "string"}, "vehicle_year": {"type": "integer"}, "vehicle_make": {"type": "string"}, "vehicle_model": {"type": "string"}, "driver_age": {"type": "integer"}, "coverage_level": {"type": "string", "enum": ["liability", "collision", "comprehensive"]}}, "required": ["customer_id", "vehicle_year", "vehicle_make", "vehicle_model", "driver_age", "coverage_level"]}},
+    {"name": "create_policy", "description": "Create a new auto insurance policy after the customer accepts a quote.", "input_schema": {"type": "object", "properties": {"customer_id": {"type": "string"}, "customer_name": {"type": "string"}, "vehicle_year": {"type": "integer"}, "vehicle_make": {"type": "string"}, "vehicle_model": {"type": "string"}, "coverage_level": {"type": "string"}, "monthly_premium": {"type": "number"}, "coverage_limit": {"type": "number"}}, "required": ["customer_id", "customer_name", "vehicle_year", "vehicle_make", "vehicle_model", "coverage_level", "monthly_premium", "coverage_limit"]}},
+    {"name": "file_claim", "description": "File an auto insurance claim. After filing, call analyze_claim_risk with the returned claim_id.", "input_schema": {"type": "object", "properties": {"policy_number": {"type": "string"}, "claim_type": {"type": "string", "enum": ["collision", "theft", "comprehensive", "glass", "vandalism"]}, "damage_amount": {"type": "number"}, "description": {"type": "string"}}, "required": ["policy_number", "claim_type", "damage_amount", "description"]}},
+    {"name": "analyze_claim_risk", "description": "Analyze a filed claim. Auto-approves low-risk claims and marks high-risk claims pending human review.", "input_schema": {"type": "object", "properties": {"claim_id": {"type": "string"}}, "required": ["claim_id"]}},
+    {"name": "check_claim_status", "description": "Check current claim status by claim ID.", "input_schema": {"type": "object", "properties": {"claim_id": {"type": "string"}}, "required": ["claim_id"]}},
+    {"name": "list_customer_claims", "description": "List claims for a customer.", "input_schema": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]}},
+    {"name": "list_pending_claims", "description": "List pending human-review claims, optionally for a customer.", "input_schema": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": []}},
+    {"name": "search_similar_claims", "description": "Semantic search over claims using natural language. Finds claims similar in meaning to the query. Optionally filter by status.", "input_schema": {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer", "default": 5}, "status": {"type": "string", "enum": ["filed", "approved", "denied", "pending_human_review"]}}, "required": ["query"]}},
 ]
 
 SYSTEM_PROMPT = """
@@ -760,49 +765,71 @@ Keep responses concise and demo-friendly.
 
 
 # =============================================================================
-# LLM LOOP — legacy OpenAI SDK, Python 3.10-friendly
+# LLM LOOP — Anthropic Claude via Grove gateway, Python 3.10-friendly
 # =============================================================================
 
-def openai_enabled() -> bool:
-    return bool(OPENAI_API_KEY and not OPENAI_API_KEY.startswith("PASTE_"))
+_ANTHROPIC_HEADERS = {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+}
+
+
+def anthropic_enabled() -> bool:
+    return bool(GROVE_API_KEY and not GROVE_API_KEY.startswith("PASTE_"))
 
 
 def run_agent(user_message: str, history: List[Dict[str, str]]) -> str:
     if not require_db():
         return "MongoDB Atlas is not configured yet."
 
-    if not openai_enabled():
+    if not anthropic_enabled():
         return fallback_agent(user_message)
 
-    openai.api_key = OPENAI_API_KEY
+    headers = {**_ANTHROPIC_HEADERS, "api-key": GROVE_API_KEY}
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend(history[-10:])
+    # Anthropic keeps system prompt separate; history holds only user/assistant turns.
+    messages: List[Dict[str, Any]] = list(history[-10:])
     messages.append({"role": "user", "content": user_message})
 
     for _ in range(5):
-        response = openai.ChatCompletion.create(
-            model=OPENAI_MODEL,
-            messages=messages,
-            functions=FUNCTIONS,
-            function_call="auto",
-        )
-        message = response["choices"][0]["message"]
-        messages.append(message)
+        payload = {
+            "model": ANTHROPIC_MODEL,
+            "system": SYSTEM_PROMPT,
+            "messages": messages,
+            "tools": TOOLS,
+            "max_tokens": 2048,
+        }
 
-        function_call = message.get("function_call")
-        if not function_call:
-            return message.get("content") or "Done."
+        response = httpx.post(ANTHROPIC_BASE_URL, headers=headers, json=payload, timeout=60)
+        response.raise_for_status()
+        data = response.json()
 
-        name = function_call.get("name")
-        raw_args = function_call.get("arguments") or "{}"
-        try:
-            args = json.loads(raw_args)
-            result = TOOL_REGISTRY[name](**args)
-        except Exception as exc:
-            result = {"error": str(exc), "tool": name}
+        content_blocks: List[Dict[str, Any]] = data["content"]
+        stop_reason: str = data["stop_reason"]
 
-        messages.append({"role": "function", "name": name, "content": json.dumps(result, default=str)})
+        text_parts = [b["text"] for b in content_blocks if b["type"] == "text"]
+        tool_uses = [b for b in content_blocks if b["type"] == "tool_use"]
+
+        if stop_reason == "end_turn" or not tool_uses:
+            return " ".join(text_parts) or "Done."
+
+        # Append assistant turn (may contain both text and tool_use blocks).
+        messages.append({"role": "assistant", "content": content_blocks})
+
+        # Execute each tool and collect results into a single user turn.
+        tool_results = []
+        for tool_use in tool_uses:
+            try:
+                result = TOOL_REGISTRY[tool_use["name"]](**tool_use["input"])
+            except Exception as exc:
+                result = {"error": str(exc), "tool": tool_use["name"]}
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": tool_use["id"],
+                "content": json.dumps(result, default=str),
+            })
+
+        messages.append({"role": "user", "content": tool_results})
 
     return "I ran several steps, but need one more message to continue."
 
@@ -881,9 +908,9 @@ def render_connection_status() -> None:
     with col1:
         st.metric("MongoDB Atlas", "Connected" if get_mongo_client() else "Missing URI")
     with col2:
-        st.metric("OpenAI", "Enabled" if openai_enabled() else "Fallback Mode")
+        st.metric("Anthropic (Grove)", "Enabled" if anthropic_enabled() else "Fallback Mode")
     with col3:
-        st.metric("Model", OPENAI_MODEL if openai_enabled() else "No API key")
+        st.metric("Model", ANTHROPIC_MODEL if anthropic_enabled() else "No API key")
 
 
 def render_demo_metrics() -> None:

@@ -5,7 +5,7 @@
 <h1 align="center">🛡️ Magenta Insurance Agent</h1>
 
 <p align="center">
-  <strong>An agentic insurance workflow powered by VoyageAI, OpenAI + MongoDB Atlas</strong><br />
+  <strong>An agentic insurance workflow powered by Anthropic Claude, Voyage AI + MongoDB Atlas</strong><br />
   Policy lookup, quotes, claims, risk scoring, human review, notifications, and vector-ready memory — all in one demo. 🚗💥📄
 </p>
 
@@ -13,7 +13,7 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" />
   <img alt="MongoDB Atlas" src="https://img.shields.io/badge/MongoDB%20Atlas-System%20of%20Record-00ED64?style=for-the-badge&logo=mongodb&logoColor=white" />
-  <img alt="OpenAI" src="https://img.shields.io/badge/OpenAI-Agent%20Reasoning-412991?style=for-the-badge&logo=openai&logoColor=white" />
+  <img alt="Anthropic" src="https://img.shields.io/badge/Anthropic-Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white" />
 </p>
 
 ---
@@ -86,7 +86,7 @@ This app lets the model choose from approved backend tools and then lets Python 
 
 ```text
 Customer message
-→ OpenAI interprets intent
+→ Claude interprets intent
 → Agent selects an approved business tool
 → Python executes the tool
 → MongoDB Atlas is read or updated
@@ -120,10 +120,10 @@ The LLM can reason about what to do, but the backend controls what is allowed to
                 │
                 ▼
 ┌──────────────────────────────┐
-│       OpenAI Chat Model       │
+│     Anthropic Claude Model    │
 │ Intent + tool selection       │
 └───────────────┬──────────────┘
-                │ function call
+                │ tool use
                 ▼
 ┌──────────────────────────────┐
 │      Python Business Tools    │
@@ -350,7 +350,7 @@ This demo is intentionally simple and Python 3.10-friendly.
 Install dependencies:
 
 ```bash
-python3 -m pip install streamlit pymongo openai==0.28.1 voyageai python-dotenv
+python3 -m pip install streamlit pymongo httpx voyageai python-dotenv
 ```
 
 Copy the example env file and fill in your values:
@@ -362,8 +362,8 @@ cp .env.example .env
 ```text
 MONGODB_URI=<your Atlas connection string>
 MONGODB_DB=magenta_insurance_demo
-OPENAI_API_KEY=<your OpenAI key>
-OPENAI_MODEL=gpt-4.1
+GROVE_API_KEY=<your Grove gateway key>
+ANTHROPIC_MODEL=claude-sonnet-4-6
 VOYAGE_API_KEY=<your Voyage AI key>   # only needed for embedder.py
 ```
 
@@ -592,7 +592,7 @@ Insurance is a perfect demo domain because it has everything enterprise agents n
 This project shows how those pieces come together with:
 
 ```text
-OpenAI + Python tools + Streamlit + MongoDB Atlas + Voyage embeddings
+Anthropic Claude + Python tools + Streamlit + MongoDB Atlas + Voyage embeddings
 ```
 
 🍃 Built to show how MongoDB makes agents durable, grounded, auditable, and useful.
