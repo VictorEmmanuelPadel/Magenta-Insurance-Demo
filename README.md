@@ -350,7 +350,7 @@ This demo is intentionally simple and Python 3.10-friendly.
 Install dependencies:
 
 ```bash
-python3 -m pip install flask pymongo httpx voyageai python-dotenv
+python3 -m pip install flask pymongo httpx python-dotenv
 ```
 
 Copy the example env file and fill in your values:

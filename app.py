@@ -426,14 +426,33 @@ def list_pending_claims(customer_id: Optional[str] = None) -> Dict[str, Any]:
     return {"pending_claims": docs}
 
 
+def _embed_query(text: str) -> List[float]:
+    """Embed a single query string via the Atlas-hosted Voyage AI API."""
+    response = httpx.post(
+        "https://ai.mongodb.com/v1/embeddings",
+        headers={
+            "Authorization": f"Bearer {os.getenv('VOYAGE_API_KEY', '')}",
+            "Content-Type": "application/json",
+        },
+        json={"input": [text], "model": "voyage-4-lite"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()["data"][0]["embedding"]
+
+
 def search_similar_claims(query: str, limit: int = 5, status: Optional[str] = None) -> Dict[str, Any]:
+    try:
+        query_vector = _embed_query(query)
+    except Exception as exc:
+        return {"error": f"Failed to embed query: {exc}", "results": [], "count": 0}
+
     pipeline: List[Dict[str, Any]] = [
         {
             "$vectorSearch": {
                 "index": "claim_vector_index",
-                "path": "embedding_text",
-                "query": {"text": query},
-                "model": "voyage-4-lite",
+                "path": "embedding",
+                "queryVector": query_vector,
                 "numCandidates": limit * 20,
                 "limit": limit,
                 **({"filter": {"status": {"$eq": status}}} if status else {}),
