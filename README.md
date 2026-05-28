@@ -11,7 +11,7 @@
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" />
+  <img alt="Flask" src="https://img.shields.io/badge/Flask-Web%20App-000000?style=for-the-badge&logo=flask&logoColor=white" />
   <img alt="MongoDB Atlas" src="https://img.shields.io/badge/MongoDB%20Atlas-System%20of%20Record-00ED64?style=for-the-badge&logo=mongodb&logoColor=white" />
   <img alt="Anthropic" src="https://img.shields.io/badge/Anthropic-Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white" />
 </p>
@@ -20,7 +20,7 @@
 
 ## 🚀 What This Is
 
-**Magenta Insurance Agent** is a Streamlit demo that shows how an LLM becomes more than a chatbot when it can safely act on real operational data.
+**Magenta Insurance Agent** is a Flask web app that shows how an LLM becomes more than a chatbot when it can safely act on real operational data.
 
 The app demonstrates an insurance assistant that can:
 
@@ -114,7 +114,7 @@ The LLM can reason about what to do, but the backend controls what is allowed to
 
 ```text
 ┌──────────────────────────────┐
-│        Streamlit UI           │
+│         Flask Web UI          │
 │  Chat · Human Review · Data   │
 └───────────────┬──────────────┘
                 │
@@ -334,7 +334,7 @@ Suggested index definition:
 Typical local files:
 
 ```text
-app.py                         # Streamlit insurance agent app
+app.py                         # Flask insurance agent app
 seeder.py                      # Adds richer customers, claims, notifications
 embedder.py                    # Adds Voyage embeddings to claims
 magenta.png                    # Pink Magenta leaf logo
@@ -350,7 +350,7 @@ This demo is intentionally simple and Python 3.10-friendly.
 Install dependencies:
 
 ```bash
-python3 -m pip install streamlit pymongo httpx voyageai python-dotenv
+python3 -m pip install flask pymongo httpx voyageai python-dotenv
 ```
 
 Copy the example env file and fill in your values:
@@ -364,14 +364,17 @@ MONGODB_URI=<your Atlas connection string>
 MONGODB_DB=magenta_insurance_demo
 GROVE_API_KEY=<your Grove gateway key>
 ANTHROPIC_MODEL=claude-sonnet-4-6
+FLASK_SECRET_KEY=change-me-in-production
 VOYAGE_API_KEY=<your Voyage AI key>   # only needed for embedder.py
 ```
 
 Run the app:
 
 ```bash
-streamlit run app.py
+python app.py
 ```
+
+The app runs at **http://localhost:8501** by default. Change the port with `PORT=8080 python app.py`.
 
 ---
 
@@ -592,7 +595,7 @@ Insurance is a perfect demo domain because it has everything enterprise agents n
 This project shows how those pieces come together with:
 
 ```text
-Anthropic Claude + Python tools + Streamlit + MongoDB Atlas + Voyage embeddings
+Anthropic Claude + Python tools + Flask + MongoDB Atlas + Voyage embeddings
 ```
 
 🍃 Built to show how MongoDB makes agents durable, grounded, auditable, and useful.

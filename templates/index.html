@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Magenta Insurance Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── LeafyGreen palette ── */
+    :root {
+      --black:        #001E2B;
+      --white:        #ffffff;
+      --gray-d3:      #21313C;
+      --gray-d2:      #3D4F58;
+      --gray-d1:      #5C6C75;
+      --gray-base:    #889397;
+      --gray-l1:      #C1C7C6;
+      --gray-l2:      #E8EDEB;
+      --gray-l3:      #F9FBFA;
+      --green-d2:     #00684A;
+      --green-d1:     #00A35C;
+      --green-base:   #00ED64;
+      --green-l2:     #C0FAE6;
+      --green-l3:     #E3FCF7;
+      --blue:         #016BF8;
+      --yellow:       #FFC010;
+      --yellow-l3:    #FEF7DB;
+      --red:          #DB3030;
+      --red-l3:       #FFEAE5;
+      --font:         'Euclid Circular A', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-code:    'Source Code Pro', 'Menlo', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--gray-l3);
+      color: var(--black);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 256px;
+      min-width: 256px;
+      background: var(--black);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .sidebar-brand {
+      padding: 1.25rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--gray-d3);
+    }
+
+    .sidebar-brand .leaf { font-size: 1.4rem; }
+
+    .sidebar-brand h2 {
+      color: var(--white);
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-top: 0.35rem;
+      line-height: 1.3;
+    }
+
+    .sidebar-brand p {
+      color: var(--gray-l1);
+      font-size: 0.75rem;
+      margin-top: 0.2rem;
+    }
+
+    .sidebar-section {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--gray-d3);
+    }
+
+    .sidebar-section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-base);
+      margin-bottom: 0.6rem;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.green { background: var(--green-base); }
+    .status-dot.gray  { background: var(--gray-base); }
+
+    .status-label {
+      font-size: 0.8rem;
+      color: var(--gray-l1);
+      flex: 1;
+    }
+
+    .status-value {
+      font-size: 0.75rem;
+      color: var(--gray-base);
+      font-family: var(--font-code);
+    }
+
+    .btn-seed {
+      width: 100%;
+      padding: 0.55rem 1rem;
+      background: var(--green-base);
+      color: var(--black);
+      border: none;
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-seed:hover { background: var(--green-l2); }
+    .btn-seed:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .seed-result {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--green-base);
+      font-family: var(--font-code);
+    }
+
+    .prompt-item {
+      display: block;
+      background: var(--gray-d3);
+      border: 1px solid var(--gray-d2);
+      border-radius: 4px;
+      padding: 0.45rem 0.6rem;
+      margin-bottom: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--gray-l1);
+      font-family: var(--font-code);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      line-height: 1.4;
+    }
+    .prompt-item:hover {
+      border-color: var(--green-d1);
+      color: var(--white);
+    }
+
+    .arch-text {
+      font-size: 0.75rem;
+      color: var(--gray-base);
+      font-family: var(--font-code);
+      line-height: 1.6;
+    }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 1.25rem;
+      gap: 1rem;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: var(--black);
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      border-left: 4px solid var(--green-base);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .hero h1 {
+      color: var(--white);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .hero h1 span { color: var(--green-base); }
+
+    .hero p {
+      color: var(--gray-l1);
+      font-size: 0.8rem;
+      margin-top: 0.2rem;
+    }
+
+    .hero-badges { display: flex; gap: 0.5rem; }
+
+    .badge {
+      padding: 0.25rem 0.6rem;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      font-family: var(--font-code);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-connected { background: var(--green-l3); color: var(--green-d2); }
+    .badge-disconnected { background: var(--gray-l2); color: var(--gray-d1); }
+    .badge-model { background: var(--black); color: var(--gray-l1); border: 1px solid var(--gray-d2); }
+
+    /* ── Metrics ── */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--white);
+      border: 1px solid var(--gray-l2);
+      border-radius: 6px;
+      padding: 0.875rem 1rem;
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-d1);
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-value {
+      font-size: 1.75rem;
+      font-weight: 600;
+      font-family: var(--font-code);
+      color: var(--black);
+      line-height: 1;
+    }
+
+    .metric-value.pending { color: var(--yellow); }
+
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      border-bottom: 2px solid var(--gray-l2);
+      background: var(--white);
+      border-radius: 6px 6px 0 0;
+      padding: 0 0.5rem;
+    }
+
+    .tab-btn {
+      padding: 0.7rem 1.1rem;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--gray-d1);
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .tab-btn:hover { color: var(--black); }
+
+    .tab-btn.active {
+      color: var(--black);
+      border-bottom-color: var(--green-d1);
+    }
+
+    .tab-panel {
+      display: none;
+      flex: 1;
+      overflow: hidden;
+      background: var(--white);
+      border: 1px solid var(--gray-l2);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+    }
+
+    .tab-panel.active { display: flex; flex-direction: column; }
+
+    .tab-content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Chat ── */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .message { display: flex; flex-direction: column; max-width: 78%; }
+    .message.user { align-self: flex-end; align-items: flex-end; }
+    .message.assistant { align-self: flex-start; align-items: flex-start; }
+
+    .message-role {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.3rem;
+      color: var(--gray-d1);
+    }
+
+    .message.user .message-role { color: var(--green-d1); }
+
+    .message-bubble {
+      padding: 0.7rem 0.95rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user .message-bubble {
+      background: var(--black);
+      color: var(--white);
+      border-bottom-right-radius: 3px;
+    }
+
+    .message.assistant .message-bubble {
+      background: var(--gray-l3);
+      border: 1px solid var(--gray-l2);
+      color: var(--black);
+      border-bottom-left-radius: 3px;
+    }
+
+    .message.error .message-bubble {
+      background: var(--red-l3);
+      border: 1px solid #FFCDC7;
+      color: #970606;
+    }
+
+    /* Typing indicator */
+    .typing-bubble {
+      background: var(--gray-l3);
+      border: 1px solid var(--gray-l2);
+      border-radius: 8px;
+      border-bottom-left-radius: 3px;
+      padding: 0.7rem 0.95rem;
+      display: flex;
+      gap: 0.3rem;
+      align-items: center;
+    }
+
+    .typing-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--gray-base);
+      animation: bounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+
+    .chat-input-area {
+      padding: 0.875rem 1.25rem;
+      border-top: 1px solid var(--gray-l2);
+      display: flex;
+      gap: 0.6rem;
+      background: var(--white);
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 0.6rem 0.875rem;
+      border: 1px solid var(--gray-l2);
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      color: var(--black);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .chat-input:focus { border-color: var(--green-d1); }
+    .chat-input::placeholder { color: var(--gray-base); }
+
+    .btn-send {
+      padding: 0.6rem 1.1rem;
+      background: var(--green-d1);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn-send:hover { background: var(--green-d2); }
+    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Human Review ── */
+    .review-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+    }
+
+    .review-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .review-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--gray-d1);
+    }
+
+    .btn-refresh {
+      padding: 0.35rem 0.75rem;
+      background: var(--white);
+      color: var(--gray-d1);
+      border: 1px solid var(--gray-l2);
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .btn-refresh:hover { border-color: var(--green-d1); color: var(--black); }
+
+    .claim-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1rem;
+    }
+
+    .claim-card {
+      background: var(--white);
+      border: 1px solid var(--gray-l2);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .claim-card-header {
+      padding: 0.875rem 1rem;
+      border-bottom: 1px solid var(--gray-l2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--gray-l3);
+    }
+
+    .claim-id {
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--black);
+    }
+
+    .risk-pill {
+      padding: 0.2rem 0.55rem;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-family: var(--font);
+    }
+
+    .risk-pill.low    { background: var(--green-l3); color: var(--green-d2); border: 1px solid var(--green-l2); }
+    .risk-pill.medium { background: var(--yellow-l3); color: #4C2100;         border: 1px solid var(--yellow); }
+    .risk-pill.high   { background: var(--red-l3);    color: #970606;          border: 1px solid #FFCDC7; }
+
+    .claim-card-body { padding: 0.875rem 1rem; }
+
+    .claim-field {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+      font-size: 0.8rem;
+    }
+
+    .claim-field-label {
+      color: var(--gray-d1);
+      font-weight: 600;
+      min-width: 90px;
+      flex-shrink: 0;
+    }
+
+    .claim-field-value { color: var(--black); }
+
+    .claim-description {
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.625rem;
+      background: var(--gray-l3);
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: var(--gray-d1);
+      line-height: 1.45;
+      font-style: italic;
+    }
+
+    .risk-reasons {
+      margin-top: 0.5rem;
+    }
+
+    .risk-reason {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      color: var(--gray-d1);
+      margin-bottom: 0.2rem;
+    }
+
+    .risk-reason::before {
+      content: "·";
+      color: var(--gray-base);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .claim-card-footer {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--gray-l2);
+    }
+
+    .reviewer-notes {
+      width: 100%;
+      padding: 0.5rem 0.625rem;
+      border: 1px solid var(--gray-l2);
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 0.8rem;
+      color: var(--black);
+      resize: vertical;
+      min-height: 52px;
+      outline: none;
+      transition: border-color 0.15s;
+      margin-bottom: 0.6rem;
+    }
+    .reviewer-notes:focus { border-color: var(--green-d1); }
+
+    .review-actions { display: flex; gap: 0.5rem; }
+
+    .btn-approve {
+      flex: 1;
+      padding: 0.5rem;
+      background: var(--green-d1);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-approve:hover { background: var(--green-d2); }
+
+    .btn-deny {
+      flex: 1;
+      padding: 0.5rem;
+      background: var(--white);
+      color: var(--red);
+      border: 1px solid #FFCDC7;
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-deny:hover { background: var(--red-l3); }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--gray-base);
+    }
+
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── Data tab ── */
+    .data-controls {
+      padding: 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--gray-l2);
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .select-control {
+      padding: 0.45rem 0.75rem;
+      border: 1px solid var(--gray-l2);
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      color: var(--black);
+      background: var(--white);
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .select-control:focus { border-color: var(--green-d1); }
+
+    .data-count {
+      font-size: 0.8rem;
+      color: var(--gray-base);
+      margin-left: auto;
+    }
+
+    .data-table-wrap {
+      flex: 1;
+      overflow: auto;
+      padding: 0 1.25rem 1.25rem;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    table.data-table th {
+      position: sticky;
+      top: 0;
+      background: var(--gray-l3);
+      border-bottom: 2px solid var(--gray-l2);
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--gray-d1);
+      white-space: nowrap;
+    }
+
+    table.data-table td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--gray-l2);
+      color: var(--black);
+      vertical-align: top;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    table.data-table tr:hover td { background: var(--gray-l3); }
+
+    td.null-val { color: var(--gray-base); font-style: italic; }
+    td.json-val { font-family: var(--font-code); font-size: 0.75rem; color: var(--gray-d1); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--black);
+      color: var(--white);
+      padding: 0.7rem 1rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      border-left: 3px solid var(--green-base);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="leaf">🍃</div>
+    <h2>Magenta Insurance Agent</h2>
+    <p>Powered by MongoDB Atlas + Claude</p>
+  </div>
+
+  <div class="sidebar-section" id="status-section">
+    <div class="sidebar-section-label">Connection</div>
+    <div class="status-row">
+      <div class="status-dot" id="dot-mongo"></div>
+      <span class="status-label">MongoDB Atlas</span>
+      <span class="status-value" id="val-mongo">—</span>
+    </div>
+    <div class="status-row">
+      <div class="status-dot" id="dot-anthropic"></div>
+      <span class="status-label">Anthropic (Grove)</span>
+      <span class="status-value" id="val-anthropic">—</span>
+    </div>
+    <div class="status-row" style="margin-top:0.25rem">
+      <span class="status-label" style="color:var(--gray-base);font-size:0.72rem">Model</span>
+      <span class="status-value" id="val-model">{{ anthropic_model }}</span>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Demo Data</div>
+    <button class="btn-seed" id="btn-seed" onclick="seedData()">Seed base sample data</button>
+    <div class="seed-result" id="seed-result"></div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Try these prompts</div>
+    <span class="prompt-item" onclick="usePrompt(this)">Look up policy POL-1001</span>
+    <span class="prompt-item" onclick="usePrompt(this)">List claims for customer CUST-003</span>
+    <span class="prompt-item" onclick="usePrompt(this)">File a glass claim for POL-1002 for $310. Small windshield chip.</span>
+    <span class="prompt-item" onclick="usePrompt(this)">File a theft claim for POL-1003 for $26,500. Truck was stolen.</span>
+    <span class="prompt-item" onclick="usePrompt(this)">What is the status of claim CLM-9002?</span>
+  </div>
+
+  <div class="sidebar-section" style="border-bottom:none;margin-top:auto">
+    <div class="sidebar-section-label">Architecture</div>
+    <div class="arch-text">
+      Flask → Claude<br>
+      → Python tools<br>
+      → MongoDB Atlas
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ── -->
+<main class="main">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div>
+      <h1>Magenta <span>Insurance Agent</span></h1>
+      <p>Policy management · Quotes · Claims · Human-in-the-loop review</p>
+    </div>
+    <div class="hero-badges">
+      <span class="badge badge-model" id="badge-model">{{ anthropic_model }}</span>
+      <span class="badge" id="badge-mongo">Atlas</span>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric-card">
+      <div class="metric-label">Customers</div>
+      <div class="metric-value" id="m-customers">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Policies</div>
+      <div class="metric-value" id="m-policies">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Claims</div>
+      <div class="metric-value" id="m-claims">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Pending Review</div>
+      <div class="metric-value pending" id="m-pending">—</div>
+    </div>
+  </div>
+
+  <!-- Tab bar + panels -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('chat', this)">💬 Chat</button>
+    <button class="tab-btn" onclick="switchTab('review', this)">🧑‍⚖️ Human Review</button>
+    <button class="tab-btn" onclick="switchTab('data', this)">🍃 Atlas Data</button>
+  </div>
+
+  <!-- Chat panel -->
+  <div class="tab-panel active" id="tab-chat">
+    <div class="tab-content-area">
+      <div class="chat-messages" id="chat-messages">
+        <div class="message assistant">
+          <div class="message-role">Agent</div>
+          <div class="message-bubble">Hi — I can help with policy lookup, quotes, and claims. Try asking about POL-1001 or filing a claim.</div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input
+          class="chat-input"
+          id="chat-input"
+          type="text"
+          placeholder="Ask about a policy, get a quote, or file a claim…"
+          onkeydown="if(event.key==='Enter')sendMessage()"
+        />
+        <button class="btn-send" id="btn-send" onclick="sendMessage()">Send →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review panel -->
+  <div class="tab-panel" id="tab-review">
+    <div class="review-area">
+      <div class="review-header">
+        <span class="review-title" id="review-title">Loading…</span>
+        <button class="btn-refresh" onclick="loadReview()">↻ Refresh</button>
+      </div>
+      <div class="claim-grid" id="claim-grid"></div>
+    </div>
+  </div>
+
+  <!-- Data panel -->
+  <div class="tab-panel" id="tab-data">
+    <div class="data-controls">
+      <select class="select-control" id="col-select" onchange="loadCollection()">
+        <option value="customers">customers</option>
+        <option value="policies">policies</option>
+        <option value="claims">claims</option>
+        <option value="quotes">quotes</option>
+        <option value="claim_reviews">claim_reviews</option>
+        <option value="notifications">notifications</option>
+      </select>
+      <select class="select-control" id="status-select" style="display:none" onchange="loadCollection()">
+        <option value="all">all statuses</option>
+        <option value="approved">approved</option>
+        <option value="denied">denied</option>
+        <option value="pending_human_review">pending review</option>
+        <option value="filed">filed</option>
+      </select>
+      <span class="data-count" id="data-count"></span>
+    </div>
+    <div class="data-table-wrap" id="data-table-wrap">
+      <div class="empty-state"><div class="icon">🍃</div><p>Select a collection above.</p></div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── State ── */
+  let chatHistory = [];
+
+  /* ── Init ── */
+  window.addEventListener('DOMContentLoaded', () => {
+    loadStatus();
+    loadCounts();
+  });
+
+  /* ── Status ── */
+  async function loadStatus() {
+    try {
+      const d = await fetch('/api/status').then(r => r.json());
+
+      document.getElementById('dot-mongo').className = 'status-dot ' + (d.mongodb ? 'green' : 'gray');
+      document.getElementById('val-mongo').textContent = d.mongodb ? 'Connected' : 'Not connected';
+
+      document.getElementById('dot-anthropic').className = 'status-dot ' + (d.anthropic ? 'green' : 'gray');
+      document.getElementById('val-anthropic').textContent = d.anthropic ? 'Enabled' : 'Fallback';
+
+      document.getElementById('badge-mongo').textContent = d.mongodb ? 'Atlas ●' : 'Atlas ○';
+      document.getElementById('badge-mongo').className = 'badge ' + (d.mongodb ? 'badge-connected' : 'badge-disconnected');
+    } catch (e) { /* silent */ }
+  }
+
+  /* ── Counts ── */
+  async function loadCounts() {
+    try {
+      const d = await fetch('/api/counts').then(r => r.json());
+      document.getElementById('m-customers').textContent = d.customers;
+      document.getElementById('m-policies').textContent  = d.policies;
+      document.getElementById('m-claims').textContent    = d.claims;
+      document.getElementById('m-pending').textContent   = d.pending;
+    } catch (e) { /* silent */ }
+  }
+
+  /* ── Tabs ── */
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'review') loadReview();
+    if (name === 'data')   loadCollection();
+  }
+
+  /* ── Seed ── */
+  async function seedData() {
+    const btn = document.getElementById('btn-seed');
+    btn.disabled = true;
+    btn.textContent = 'Seeding…';
+    try {
+      const d = await fetch('/api/seed', { method: 'POST' }).then(r => r.json());
+      if (d.error) {
+        document.getElementById('seed-result').textContent = d.error;
+      } else {
+        document.getElementById('seed-result').textContent =
+          `+${d.customers} customers, +${d.policies} policies, +${d.claims} claims`;
+        loadCounts();
+        showToast('Base data seeded successfully.');
+      }
+    } catch (e) {
+      document.getElementById('seed-result').textContent = 'Error seeding data.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Seed base sample data';
+    }
+  }
+
+  /* ── Chat ── */
+  function usePrompt(el) {
+    document.getElementById('chat-input').value = el.textContent.trim();
+    document.getElementById('chat-input').focus();
+    // Switch to chat tab
+    document.querySelector('.tab-btn').click();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    const btn = document.getElementById('btn-send');
+    btn.disabled = true;
+    input.disabled = true;
+
+    appendMessage('user', msg);
+    chatHistory.push({ role: 'user', content: msg });
+    scrollChat();
+
+    const typingId = showTyping();
+
+    try {
+      const d = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, history: chatHistory.slice(-10) }),
+      }).then(r => r.json());
+
+      removeTyping(typingId);
+
+      const text = d.response || d.error || 'Something went wrong.';
+      appendMessage(d.error ? 'error' : 'assistant', text);
+      chatHistory.push({ role: 'assistant', content: text });
+
+      // Refresh counts if an action was likely taken
+      if (/filed|approved|denied|created|policy/i.test(text)) loadCounts();
+
+    } catch (e) {
+      removeTyping(typingId);
+      appendMessage('error', 'Request failed. Check your connection.');
+    } finally {
+      btn.disabled = false;
+      input.disabled = false;
+      input.focus();
+      scrollChat();
+    }
+  }
+
+  function appendMessage(role, text) {
+    const wrap = document.createElement('div');
+    wrap.className = 'message ' + role;
+
+    const roleLabel = document.createElement('div');
+    roleLabel.className = 'message-role';
+    roleLabel.textContent = role === 'user' ? 'You' : role === 'assistant' ? 'Agent' : 'Error';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble';
+    bubble.textContent = text;
+
+    wrap.appendChild(roleLabel);
+    wrap.appendChild(bubble);
+    document.getElementById('chat-messages').appendChild(wrap);
+    scrollChat();
+    return wrap;
+  }
+
+  function showTyping() {
+    const id = 'typing-' + Date.now();
+    const wrap = document.createElement('div');
+    wrap.id = id;
+    wrap.className = 'message assistant';
+
+    const roleLabel = document.createElement('div');
+    roleLabel.className = 'message-role';
+    roleLabel.textContent = 'Agent';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'typing-bubble';
+    bubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+
+    wrap.appendChild(roleLabel);
+    wrap.appendChild(bubble);
+    document.getElementById('chat-messages').appendChild(wrap);
+    scrollChat();
+    return id;
+  }
+
+  function removeTyping(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function scrollChat() {
+    const el = document.getElementById('chat-messages');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  /* ── Human Review ── */
+  async function loadReview() {
+    const grid = document.getElementById('claim-grid');
+    const title = document.getElementById('review-title');
+    grid.innerHTML = '';
+    title.textContent = 'Loading…';
+
+    try {
+      const claims = await fetch('/api/pending').then(r => r.json());
+
+      if (!claims.length) {
+        title.textContent = 'No claims awaiting review';
+        grid.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>All claims have been reviewed.</p></div>';
+        return;
+      }
+
+      title.textContent = `${claims.length} claim${claims.length > 1 ? 's' : ''} awaiting review`;
+
+      claims.forEach(claim => {
+        const risk = claim.risk_level || 'unknown';
+        const reasons = (claim.risk_reasons || []).map(r =>
+          `<div class="risk-reason">${esc(r)}</div>`).join('');
+
+        const card = document.createElement('div');
+        card.className = 'claim-card';
+        card.innerHTML = `
+          <div class="claim-card-header">
+            <span class="claim-id">${esc(claim.claim_id)}</span>
+            <span class="risk-pill ${risk}">${risk} risk</span>
+          </div>
+          <div class="claim-card-body">
+            <div class="claim-field">
+              <span class="claim-field-label">Policy</span>
+              <span class="claim-field-value">${esc(claim.policy_number)}</span>
+            </div>
+            <div class="claim-field">
+              <span class="claim-field-label">Customer</span>
+              <span class="claim-field-value">${esc(claim.customer_id)}</span>
+            </div>
+            <div class="claim-field">
+              <span class="claim-field-label">Type</span>
+              <span class="claim-field-value">${esc(claim.claim_type)}</span>
+            </div>
+            <div class="claim-field">
+              <span class="claim-field-label">Amount</span>
+              <span class="claim-field-value">$${Number(claim.damage_amount).toLocaleString()}</span>
+            </div>
+            <div class="claim-field">
+              <span class="claim-field-label">Risk score</span>
+              <span class="claim-field-value">${claim.risk_score ?? '—'}</span>
+            </div>
+            <div class="claim-description">${esc(claim.description || '')}</div>
+            ${reasons ? `<div class="risk-reasons">${reasons}</div>` : ''}
+          </div>
+          <div class="claim-card-footer">
+            <textarea class="reviewer-notes" id="notes-${claim.claim_id}" rows="2"
+              placeholder="Reviewer notes…">Documentation reviewed. Decision entered by demo adjuster.</textarea>
+            <div class="review-actions">
+              <button class="btn-approve" onclick="resolveCard('${claim.claim_id}','approved')">✓ Approve</button>
+              <button class="btn-deny" onclick="resolveCard('${claim.claim_id}','denied')">✕ Deny</button>
+            </div>
+          </div>`;
+        grid.appendChild(card);
+      });
+
+    } catch (e) {
+      title.textContent = 'Failed to load review queue.';
+    }
+  }
+
+  async function resolveCard(claimId, decision) {
+    const notes = document.getElementById('notes-' + claimId)?.value || '';
+    try {
+      await fetch('/api/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claim_id: claimId, decision, notes }),
+      });
+      showToast(`${claimId} ${decision}.`);
+      loadReview();
+      loadCounts();
+    } catch (e) {
+      showToast('Error resolving claim.');
+    }
+  }
+
+  /* ── Data ── */
+  function onCollectionChange() {
+    const name = document.getElementById('col-select').value;
+    document.getElementById('status-select').style.display = name === 'claims' ? '' : 'none';
+    loadCollection();
+  }
+
+  document.getElementById('col-select').addEventListener('change', onCollectionChange);
+
+  async function loadCollection() {
+    const name   = document.getElementById('col-select').value;
+    const status = document.getElementById('status-select').value;
+    const wrap   = document.getElementById('data-table-wrap');
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Loading…</p></div>';
+
+    let url = `/api/collection/${name}`;
+    if (name === 'claims' && status && status !== 'all') url += `?status=${status}`;
+
+    try {
+      const docs = await fetch(url).then(r => r.json());
+      document.getElementById('data-count').textContent = `${docs.length} document${docs.length !== 1 ? 's' : ''}`;
+
+      if (!docs.length) {
+        wrap.innerHTML = '<div class="empty-state"><div class="icon">🍃</div><p>No documents found.</p></div>';
+        return;
+      }
+
+      const keys = [...new Set(docs.flatMap(d => Object.keys(d)))];
+
+      const thead = `<thead><tr>${keys.map(k => `<th>${esc(k)}</th>`).join('')}</tr></thead>`;
+      const tbody = `<tbody>${docs.map(doc => `<tr>${keys.map(k => {
+        const v = doc[k];
+        if (v === null || v === undefined)
+          return `<td class="null-val">null</td>`;
+        if (typeof v === 'object')
+          return `<td class="json-val">${esc(JSON.stringify(v))}</td>`;
+        return `<td>${esc(String(v))}</td>`;
+      }).join('')}</tr>`).join('')}</tbody>`;
+
+      wrap.innerHTML = `<table class="data-table">${thead}${tbody}</table>`;
+
+    } catch (e) {
+      wrap.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load collection.</p></div>';
+    }
+  }
+
+  /* ── Toast ── */
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  /* ── Helpers ── */
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>

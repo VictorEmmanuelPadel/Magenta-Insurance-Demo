@@ -1,34 +1,34 @@
 """
 Magenta Insurance Agent Demo
-Python 3.10-compatible Streamlit app using MongoDB Atlas + Anthropic Claude via Grove gateway.
+Flask web app using MongoDB Atlas + Anthropic Claude via Grove gateway.
 
 Install:
-  python3 -m pip install streamlit pymongo httpx python-dotenv
+  python3 -m pip install flask pymongo httpx voyageai python-dotenv
 
 Run:
-  streamlit run app.py
+  python app.py
 
 Config:
-  Copy .env.example to .env and fill in your values. The app reads from .env automatically.
+  Copy .env.example to .env and fill in your values.
 """
 
 import json
 import os
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
-import streamlit as st
 from dotenv import load_dotenv
+from flask import Flask, jsonify, render_template, request
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
 load_dotenv()
 
 # =============================================================================
-# CONFIG — values are loaded from .env; override here only if needed
+# CONFIG
 # =============================================================================
 
 GROVE_API_KEY = os.getenv("GROVE_API_KEY", "")
@@ -42,279 +42,17 @@ MONGODB_DB = os.getenv("MONGODB_DB", "magenta_insurance_demo")
 
 
 # =============================================================================
-# STREAMLIT PAGE + THEME
-# =============================================================================
-
-st.set_page_config(
-    page_title="Magenta Insurance Agent",
-    page_icon="🍃",
-    layout="wide",
-)
-
-# MongoDB LeafyGreen design system
-# Palette: https://www.mongodb.design/foundations/palette
-LG_CSS = """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&display=swap');
-
-    :root {
-        /* LeafyGreen palette */
-        --mdb-black:       #001E2B;
-        --mdb-white:       #ffffff;
-
-        --gray-dark-3:     #21313C;
-        --gray-dark-2:     #3D4F58;
-        --gray-dark-1:     #5C6C75;
-        --gray-base:       #889397;
-        --gray-light-1:    #C1C7C6;
-        --gray-light-2:    #E8EDEB;
-        --gray-light-3:    #F9FBFA;
-
-        --green-dark-3:    #023430;
-        --green-dark-2:    #00684A;
-        --green-dark-1:    #00A35C;
-        --green-base:      #00ED64;
-        --green-light-1:   #71F6BA;
-        --green-light-2:   #C0FAE6;
-        --green-light-3:   #E3FCF7;
-
-        --blue-base:       #016BF8;
-        --blue-light-3:    #E1F7FF;
-
-        --yellow-base:     #FFC010;
-        --yellow-light-3:  #FEF7DB;
-
-        --red-base:        #DB3030;
-        --red-light-3:     #FFEAE5;
-
-        --purple-base:     #B45AF2;
-        --purple-light-3:  #F9EBFF;
-
-        /* Semantic tokens */
-        --text-primary:    var(--mdb-black);
-        --text-secondary:  var(--gray-dark-1);
-        --text-muted:      var(--gray-base);
-        --bg-primary:      var(--mdb-white);
-        --bg-secondary:    var(--gray-light-3);
-        --border-color:    var(--gray-light-2);
-
-        --font-body: 'Euclid Circular A', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        --font-code: 'Source Code Pro', 'Menlo', 'Courier New', monospace;
-    }
-
-    /* ── Global ── */
-    .stApp {
-        background-color: var(--bg-secondary);
-        font-family: var(--font-body);
-        color: var(--text-primary);
-    }
-
-    h1, h2, h3, h4 {
-        font-family: var(--font-body);
-        color: var(--text-primary);
-    }
-
-    /* ── Hero banner ── */
-    .hero {
-        background-color: var(--mdb-black);
-        border-radius: 8px;
-        padding: 1.5rem 1.75rem;
-        margin-bottom: 1.25rem;
-        border-left: 4px solid var(--green-base);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .hero-text h1 {
-        color: var(--mdb-white);
-        margin: 0;
-        font-size: 1.9rem;
-        letter-spacing: -0.01em;
-    }
-
-    .hero-text h1 span {
-        color: var(--green-base);
-    }
-
-    .hero-text p {
-        color: var(--gray-light-1);
-        margin: 0.3rem 0 0 0;
-        font-size: 0.95rem;
-    }
-
-    /* ── Metric cards ── */
-    [data-testid="stMetric"] {
-        background-color: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1rem 1.25rem;
-        box-shadow: 0 1px 3px rgba(0, 30, 43, 0.06);
-    }
-
-    [data-testid="stMetric"] label {
-        color: var(--text-secondary) !important;
-        font-size: 0.8rem !important;
-        font-weight: 700 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-    }
-
-    [data-testid="stMetricValue"] {
-        color: var(--text-primary) !important;
-        font-family: var(--font-code) !important;
-        font-size: 1.8rem !important;
-    }
-
-    /* ── Status pills ── */
-    .status-pill {
-        display: inline-block;
-        padding: 0.2rem 0.55rem;
-        border-radius: 4px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        font-family: var(--font-body);
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
-        vertical-align: middle;
-    }
-
-    .status-pill.risk-low {
-        background-color: var(--green-light-3);
-        color: var(--green-dark-2);
-        border: 1px solid var(--green-light-2);
-    }
-
-    .status-pill.risk-medium {
-        background-color: var(--yellow-light-3);
-        color: #4C2100;
-        border: 1px solid var(--yellow-base);
-    }
-
-    .status-pill.risk-high {
-        background-color: var(--red-light-3);
-        color: #970606;
-        border: 1px solid #FFCDC7;
-    }
-
-    .status-pill.risk-unknown {
-        background-color: var(--gray-light-3);
-        color: var(--gray-dark-2);
-        border: 1px solid var(--gray-light-2);
-    }
-
-    /* ── Review cards ── */
-    .review-card {
-        background-color: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1.25rem 1.5rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 1px 3px rgba(0, 30, 43, 0.06);
-    }
-
-    /* ── Buttons ── */
-    .stButton > button {
-        border-radius: 6px;
-        background-color: var(--green-dark-1);
-        color: var(--mdb-white);
-        border: 1px solid var(--green-dark-1);
-        font-weight: 700;
-        font-family: var(--font-body);
-        font-size: 0.875rem;
-        padding: 0.45rem 1rem;
-        transition: background-color 0.15s ease, border-color 0.15s ease;
-    }
-
-    .stButton > button:hover {
-        background-color: var(--green-dark-2);
-        border-color: var(--green-dark-2);
-        color: var(--mdb-white);
-    }
-
-    /* ── Sidebar ── */
-    [data-testid="stSidebar"] {
-        background-color: var(--mdb-black);
-    }
-
-    [data-testid="stSidebar"] * {
-        color: var(--gray-light-1) !important;
-    }
-
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3,
-    [data-testid="stSidebar"] .stSidebarHeader {
-        color: var(--mdb-white) !important;
-    }
-
-    [data-testid="stSidebar"] .stButton > button {
-        background-color: var(--green-base);
-        border-color: var(--green-base);
-        color: var(--mdb-black);
-    }
-
-    [data-testid="stSidebar"] .stButton > button:hover {
-        background-color: var(--green-light-1);
-        border-color: var(--green-light-1);
-        color: var(--mdb-black);
-    }
-
-    [data-testid="stSidebar"] code {
-        background-color: var(--gray-dark-3) !important;
-        color: var(--green-base) !important;
-        border-radius: 4px;
-        padding: 0.15rem 0.4rem;
-        font-family: var(--font-code);
-    }
-
-    /* ── Tabs ── */
-    [data-testid="stTabs"] [data-baseweb="tab-list"] {
-        border-bottom: 2px solid var(--border-color);
-        gap: 0;
-    }
-
-    [data-testid="stTabs"] [data-baseweb="tab"] {
-        font-family: var(--font-body);
-        font-weight: 600;
-        font-size: 0.875rem;
-        color: var(--text-secondary);
-        padding: 0.6rem 1.25rem;
-        border-bottom: 3px solid transparent;
-        margin-bottom: -2px;
-    }
-
-    [data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {
-        color: var(--mdb-black);
-        border-bottom-color: var(--green-dark-1);
-    }
-
-    /* ── Dataframe ── */
-    [data-testid="stDataFrame"] {
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    /* ── General card-like containers ── */
-    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-        background-color: var(--bg-primary);
-    }
-</style>
-"""
-
-st.markdown(LG_CSS, unsafe_allow_html=True)
-
-
-# =============================================================================
 # DATABASE
 # =============================================================================
 
-@st.cache_resource
+_mongo_client: Optional[MongoClient] = None
+
+
 def get_mongo_client() -> Optional[MongoClient]:
-    if not MONGODB_URI or MONGODB_URI.startswith("PASTE_"):
-        return None
-    return MongoClient(MONGODB_URI)
+    global _mongo_client
+    if _mongo_client is None and MONGODB_URI and not MONGODB_URI.startswith("PASTE_"):
+        _mongo_client = MongoClient(MONGODB_URI)
+    return _mongo_client
 
 
 def get_collection(name: str) -> Optional[Collection]:
@@ -324,15 +62,12 @@ def get_collection(name: str) -> Optional[Collection]:
     return client[MONGODB_DB][name]
 
 
-def require_db() -> bool:
-    if get_mongo_client() is None:
-        st.error("MongoDB Atlas is not configured. Paste your Atlas URI into MONGODB_URI at the top of app.py.")
-        return False
-    return True
+def db_connected() -> bool:
+    return get_mongo_client() is not None
 
 
 def now_iso() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    return datetime.now(tz=timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def make_id(prefix: str) -> str:
@@ -388,11 +123,11 @@ SAMPLE_CLAIMS = [
 ]
 
 
-def seed_database() -> Dict[str, int]:
-    if not require_db():
-        return {"customers": 0, "policies": 0, "claims": 0}
+def seed_database() -> Dict[str, Any]:
+    if not db_connected():
+        return {"error": "MongoDB not connected", "customers": 0, "policies": 0, "claims": 0}
 
-    inserted = {"customers": 0, "policies": 0, "claims": 0}
+    inserted: Dict[str, int] = {"customers": 0, "policies": 0, "claims": 0}
 
     for customer in SAMPLE_CUSTOMERS:
         result = get_collection("customers").update_one(
@@ -440,7 +175,7 @@ def list_customer_policies(customer_id: str) -> Dict[str, Any]:
 def get_quote(customer_id: str, vehicle_year: int, vehicle_make: str, vehicle_model: str, driver_age: int, coverage_level: str) -> Dict[str, Any]:
     coverage_level = coverage_level.lower().strip()
     base = 95.0
-    current_year = datetime.utcnow().year
+    current_year = datetime.now(tz=timezone.utc).year
     vehicle_age = max(current_year - int(vehicle_year), 0)
 
     if coverage_level == "comprehensive":
@@ -684,7 +419,7 @@ def list_customer_claims(customer_id: str) -> Dict[str, Any]:
 
 
 def list_pending_claims(customer_id: Optional[str] = None) -> Dict[str, Any]:
-    query = {"status": "pending_human_review"}
+    query: Dict[str, Any] = {"status": "pending_human_review"}
     if customer_id:
         query["customer_id"] = customer_id.upper()
     docs = [clean_doc(d) for d in get_collection("claims").find(query).sort("created_at", -1)]
@@ -692,8 +427,6 @@ def list_pending_claims(customer_id: Optional[str] = None) -> Dict[str, Any]:
 
 
 def search_similar_claims(query: str, limit: int = 5, status: Optional[str] = None) -> Dict[str, Any]:
-    # autoEmbed index — index built with voyage-4-large (1024 dims); voyage-4-lite
-    # overrides at query-time (cheaper) and is compatible via shared 1024-dim output.
     pipeline: List[Dict[str, Any]] = [
         {
             "$vectorSearch": {
@@ -739,7 +472,6 @@ TOOL_REGISTRY = {
     "search_similar_claims": search_similar_claims,
 }
 
-# Anthropic tool definitions — same as OpenAI functions but uses input_schema instead of parameters.
 TOOLS = [
     {"name": "lookup_policy", "description": "Look up an insurance policy by policy number.", "input_schema": {"type": "object", "properties": {"policy_number": {"type": "string"}}, "required": ["policy_number"]}},
     {"name": "list_customer_policies", "description": "List policies for a customer.", "input_schema": {"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]}},
@@ -765,7 +497,7 @@ Keep responses concise and demo-friendly.
 
 
 # =============================================================================
-# LLM LOOP — Anthropic Claude via Grove gateway, Python 3.10-friendly
+# LLM LOOP
 # =============================================================================
 
 _ANTHROPIC_HEADERS = {
@@ -779,15 +511,13 @@ def anthropic_enabled() -> bool:
 
 
 def run_agent(user_message: str, history: List[Dict[str, str]]) -> str:
-    if not require_db():
+    if not db_connected():
         return "MongoDB Atlas is not configured yet."
 
     if not anthropic_enabled():
         return fallback_agent(user_message)
 
     headers = {**_ANTHROPIC_HEADERS, "api-key": GROVE_API_KEY}
-
-    # Anthropic keeps system prompt separate; history holds only user/assistant turns.
     messages: List[Dict[str, Any]] = list(history[-10:])
     messages.append({"role": "user", "content": user_message})
 
@@ -813,10 +543,8 @@ def run_agent(user_message: str, history: List[Dict[str, str]]) -> str:
         if stop_reason == "end_turn" or not tool_uses:
             return " ".join(text_parts) or "Done."
 
-        # Append assistant turn (may contain both text and tool_use blocks).
         messages.append({"role": "assistant", "content": content_blocks})
 
-        # Execute each tool and collect results into a single user turn.
         tool_results = []
         for tool_use in tool_uses:
             try:
@@ -875,186 +603,94 @@ def fallback_agent(user_message: str) -> str:
 
 
 # =============================================================================
-# UI
+# FLASK APP
 # =============================================================================
 
-def render_header() -> None:
-    st.markdown(
-        """
-        <div class="hero">
-            <div class="hero-text">
-                <h1>Magenta <span>Insurance Agent</span></h1>
-                <p>Policy management · Quotes · Claims processing · Human-in-the-loop review</p>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "magenta-demo-secret")
+
+
+@app.route("/")
+def index():
+    return render_template(
+        "index.html",
+        anthropic_model=ANTHROPIC_MODEL,
+        mongodb_db=MONGODB_DB,
     )
 
 
-def get_counts() -> Dict[str, int]:
-    if get_mongo_client() is None:
-        return {"customers": 0, "policies": 0, "claims": 0, "pending": 0}
-    return {
+@app.route("/api/status")
+def api_status():
+    return jsonify({
+        "mongodb": db_connected(),
+        "anthropic": anthropic_enabled(),
+        "model": ANTHROPIC_MODEL,
+    })
+
+
+@app.route("/api/counts")
+def api_counts():
+    if not db_connected():
+        return jsonify({"customers": 0, "policies": 0, "claims": 0, "pending": 0})
+    return jsonify({
         "customers": get_collection("customers").count_documents({}),
         "policies": get_collection("policies").count_documents({}),
         "claims": get_collection("claims").count_documents({}),
         "pending": get_collection("claims").count_documents({"status": "pending_human_review"}),
-    }
+    })
 
 
-def render_connection_status() -> None:
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("MongoDB Atlas", "Connected" if get_mongo_client() else "Missing URI")
-    with col2:
-        st.metric("Anthropic (Grove)", "Enabled" if anthropic_enabled() else "Fallback Mode")
-    with col3:
-        st.metric("Model", ANTHROPIC_MODEL if anthropic_enabled() else "No API key")
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    data = request.get_json()
+    message = data.get("message", "").strip()
+    history = data.get("history", [])
+    if not message:
+        return jsonify({"error": "Empty message"}), 400
+    response = run_agent(message, history)
+    return jsonify({"response": response})
 
 
-def render_demo_metrics() -> None:
-    counts = get_counts()
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Customers", counts["customers"])
-    with col2:
-        st.metric("Policies", counts["policies"])
-    with col3:
-        st.metric("Claims", counts["claims"])
-    with col4:
-        st.metric("Pending Review", counts["pending"])
+@app.route("/api/seed", methods=["POST"])
+def api_seed():
+    result = seed_database()
+    return jsonify(result)
 
 
-def render_sidebar() -> None:
-    with st.sidebar:
-        st.header("Demo Controls")
-        st.write("Seed the base data if the database is empty. Your separate seeder can add the larger dataset.")
-        if st.button("Seed base sample data"):
-            inserted = seed_database()
-            st.success(f"Seeded base data: {inserted}")
-            st.rerun()
-
-        st.divider()
-        st.caption("Architecture")
-        st.code("Streamlit → OpenAI → Python tools → MongoDB Atlas", language=None)
-
-        st.divider()
-        st.caption("Try")
-        st.code("Look up policy POL-1001")
-        st.code("File a collision claim for POL-1001 for $750. Small dent in bumper.")
-        st.code("File a theft claim for POL-1003 for $26,500. Truck was stolen.")
+@app.route("/api/pending")
+def api_pending():
+    if not db_connected():
+        return jsonify([])
+    result = list_pending_claims()
+    return jsonify(result["pending_claims"])
 
 
-def render_chat_tab() -> None:
-    st.subheader("Customer Chat")
-
-    if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Hi — I can help with quotes, policy lookup, and claims. Try asking about POL-1001 or filing a claim."}
-        ]
-
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-
-    prompt = st.chat_input("Ask for a quote, look up a policy, or file a claim...")
-    if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
-
-        history = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] in ["user", "assistant"]]
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                answer = run_agent(prompt, history)
-            st.write(answer)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+@app.route("/api/resolve", methods=["POST"])
+def api_resolve():
+    data = request.get_json()
+    result = resolve_claim(
+        data["claim_id"],
+        data["decision"],
+        data.get("notes", ""),
+    )
+    return jsonify(result)
 
 
-def render_review_tab() -> None:
-    st.subheader("Human Review Queue")
-    if not require_db():
-        return
-
-    pending = list(get_collection("claims").find({"status": "pending_human_review"}).sort("created_at", -1))
-    if not pending:
-        st.success("No claims are waiting for human review.")
-        return
-
-    for raw in pending:
-        claim = clean_doc(raw)
-        risk_level = claim.get("risk_level", "unknown")
-        risk_css = f"risk-{risk_level}" if risk_level in ("low", "medium", "high") else "risk-unknown"
-        st.markdown("<div class='review-card'>", unsafe_allow_html=True)
-        st.markdown(f"### {claim['claim_id']} <span class='status-pill {risk_css}'>{risk_level} risk</span>", unsafe_allow_html=True)
-        st.write(f"**Policy:** {claim['policy_number']}")
-        st.write(f"**Customer:** {claim['customer_id']}")
-        st.write(f"**Type:** {claim['claim_type']}")
-        st.write(f"**Amount:** ${claim['damage_amount']:,.2f}")
-        st.write(f"**Risk score:** {claim.get('risk_score')}")
-        st.write(f"**Description:** {claim.get('description')}")
-        if claim.get("risk_reasons"):
-            st.write("**Reasons:**")
-            for reason in claim["risk_reasons"]:
-                st.write(f"- {reason}")
-
-        notes = st.text_area(
-            "Reviewer notes",
-            value="Documentation reviewed. Decision entered by demo adjuster.",
-            key=f"notes_{claim['claim_id']}",
-        )
-        col_a, col_b = st.columns(2)
-        with col_a:
-            if st.button("Approve", key=f"approve_{claim['claim_id']}"):
-                resolve_claim(claim["claim_id"], "approved", notes)
-                st.success(f"Approved {claim['claim_id']} and logged notification.")
-                st.rerun()
-        with col_b:
-            if st.button("Deny", key=f"deny_{claim['claim_id']}"):
-                resolve_claim(claim["claim_id"], "denied", notes)
-                st.warning(f"Denied {claim['claim_id']} and logged notification.")
-                st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-
-def render_data_tab() -> None:
-    st.subheader("Atlas Data")
-    if not require_db():
-        return
-
-    collection_name = st.selectbox("Collection", ["customers", "policies", "claims", "quotes", "claim_reviews", "notifications"])
-    status_filter = None
-    if collection_name == "claims":
-        status_filter = st.selectbox("Status filter", ["all", "approved", "denied", "pending_human_review", "filed"])
-
+@app.route("/api/collection/<name>")
+def api_collection(name: str):
+    allowed = ["customers", "policies", "claims", "quotes", "claim_reviews", "notifications"]
+    if name not in allowed:
+        return jsonify({"error": "Unknown collection"}), 400
+    if not db_connected():
+        return jsonify([])
     query: Dict[str, Any] = {}
-    if collection_name == "claims" and status_filter and status_filter != "all":
-        query["status"] = status_filter
-
-    docs = [clean_doc(d) for d in get_collection(collection_name).find(query).sort("created_at", -1).limit(200)]
-    if docs:
-        st.dataframe(docs, use_container_width=True)
-    else:
-        st.info(f"No documents found in {collection_name}.")
-
-
-def main() -> None:
-    render_header()
-    render_sidebar()
-    render_connection_status()
-    st.write("")
-    render_demo_metrics()
-    st.write("")
-
-    tab_chat, tab_review, tab_data = st.tabs(["Chat", "Human Review", "Data"])
-    with tab_chat:
-        render_chat_tab()
-    with tab_review:
-        render_review_tab()
-    with tab_data:
-        render_data_tab()
+    status = request.args.get("status")
+    if name == "claims" and status and status != "all":
+        query["status"] = status
+    docs = [clean_doc(d) for d in get_collection(name).find(query).sort("created_at", -1).limit(200)]
+    return jsonify(docs)
 
 
 if __name__ == "__main__":
-    main()
+    port = int(os.getenv("PORT", 8501))
+    app.run(debug=True, host="0.0.0.0", port=port)

@@ -1,5 +1,5 @@
 """
-Add more demo customers and claims to the Magenta Insurance Streamlit demo.
+Add more demo customers and claims to the Magenta Insurance demo.
 
 Python 3.10-compatible.
 
